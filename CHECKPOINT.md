@@ -1,25 +1,26 @@
-# Checkpoint — 2026-09-15
+# Checkpoint — 2026-09-15 — v2
 
 ## Preserved architecture
-One portable Media Intelligence Worker, not separate Instagram/Telegram workers.
-Supported source types: instagram_reel, telegram_photo, telegram_voice, telegram_document.
+One portable Media Intelligence Worker for Instagram and Telegram.
 
-## Immediate acceptance criterion
-Telegram photo -> downloaded file -> actual OCR/Vision -> structured JSON -> existing Poker House Assistant text/memory path.
+## Implemented in v2
+- stable JSON envelope / SHA-256 identity
+- multilingual faster-whisper
+- Tesseract OCR
+- actual semantic Vision adapter via swappable OpenAI-compatible endpoint
+- FastAPI `POST /v1/process` multipart endpoint for Make
+- `GET /health`
+- temporary upload deletion after processing
+- explicit `not_configured` state: OCR is never mislabeled as Vision
 
-## Current implementation
-- standardized JSON envelope
-- SHA-256/dedup-ready file identity
-- MIME metadata
-- multilingual faster-whisper adapter
-- Tesseract OCR adapter
-- document text bootstrap
-- error/status/timing fields
-- semantic vision adapter slot
+## Immediate next acceptance test
+Deploy worker to a suitable cloud runtime, configure a Vision provider as a runtime secret, then:
+`telegram_photo -> Make Download File -> POST /v1/process -> actual visual description + OCR -> structured JSON`
 
-## Next
-1. Attach a real semantic Vision backend to `visual`.
-2. Expose HTTP POST endpoint for Make binary upload.
-3. Validate with natural Telegram photo 1550 if binary is still available; otherwise next natural photo.
-4. Only after endpoint passes, change Make scenario 6245187 photo route.
-5. Never send results to work group; delivery remains personal Telegram only.
+Do not modify Make scenario 6245187 until the endpoint passes a real photo test.
+
+## Routing invariant
+Results/notifications go only to the owner's personal Telegram. Never send to the Poker House work group.
+
+## Security
+No private media, transcripts, tokens, API keys, cookies or sessions in GitHub.

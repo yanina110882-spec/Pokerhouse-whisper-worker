@@ -1,16 +1,38 @@
 # Pokerhouse Media Intelligence Worker
 
-Portable code-only worker for Poker House media intelligence. It accepts Telegram photos, voice messages and documents plus Instagram Reels, and emits one stable JSON envelope for the Poker House Assistant.
+Portable code-only worker for Poker House media intelligence.
 
-## First checkpoint
-`telegram_photo -> file -> OCR/Vision -> structured JSON`
+## Current checkpoint
+`telegram_photo -> downloaded file -> OCR + semantic Vision -> structured JSON -> Poker House Assistant`
 
-The current bootstrap implements file hashing, MIME detection, Tesseract OCR, multilingual faster-whisper ASR, standardized JSON, errors and timing. Semantic image vision is deliberately isolated behind the `visual` field so a free/local or cloud runtime can be swapped without changing Make or the assistant contract.
+## HTTP endpoint
+Run:
+
+```bash
+pip install -r requirements.txt
+python worker.py --serve
+```
+
+Health:
+`GET /health`
+
+Process media:
+`POST /v1/process` as multipart/form-data:
+- `file`: binary media
+- `source_type`: `telegram_photo`, `telegram_voice`, `telegram_document`, or `instagram_reel`
+- `caption`: optional text
+
+## Vision
+Semantic image understanding uses an OpenAI-compatible vision endpoint so the runtime/provider can be replaced without changing Make.
+
+Runtime environment variables:
+- `VISION_BASE_URL`
+- `VISION_API_KEY`
+- `VISION_MODEL`
+
+Credentials are runtime secrets only. Never commit them.
+
+If Vision is not configured, the worker explicitly returns `visual.status = not_configured`; it never pretends OCR is semantic image understanding.
 
 ## Safety
-Do not commit Telegram/Instagram media, transcripts, cookies, tokens, credentials or session data. Repository is code/config documentation only.
-
-## Example
-```bash
-python worker.py --source-type telegram_photo --file photo.jpg --caption "optional caption" --output result.json
-```
+Never commit Telegram/Instagram media, transcripts, cookies, tokens, credentials or session data.
