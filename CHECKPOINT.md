@@ -62,8 +62,10 @@ No kitchen; non-alcoholic bar only. No work-group notifications. Publication,
 spending, external account changes or messages to others require confirmation.
 No paid fallback, trial dependency, Work/Make runtime dependency.
 
-## Persistence blocker
-Local commit prepared and tests passed. Git push had no shell credentials;
-GitHub connector create_tree returned HTTP 403 Resource not accessible by
-integration. Remote main remains unchanged. Owner must grant repository Contents
-read/write access to the GitHub connection before code/checkpoint publication.
+## Repository status — 2026-09-19
+The reviewed V3 code-only archive was uploaded to GitHub branch
+`codex/poker-house-assistant-v3` through the authenticated GitHub web interface.
+All 11 files matched the archive by Git blob hash before this status update.
+Draft pull request #1 targets `main`; `main` still contains V2 until merge.
+The GitHub connector remains read-only for writes (HTTP 403), but this no longer
+blocks publication through the browser. No Make or Telegram webhook changes.
