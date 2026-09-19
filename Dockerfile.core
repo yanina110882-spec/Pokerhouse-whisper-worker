@@ -1,0 +1,8 @@
+FROM python:3.11-slim
+WORKDIR /app
+RUN pip install --no-cache-dir httpx==0.28.1 && useradd -m -u 10001 assistant
+COPY assistant_core.py .
+RUN mkdir /data && chown assistant:assistant /data
+USER assistant
+ENV ASSISTANT_DB=/data/assistant.sqlite
+CMD ["python", "assistant_core.py", "preflight"]
