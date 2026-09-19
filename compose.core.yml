@@ -1,0 +1,24 @@
+services:
+  listener:
+    build:
+      context: .
+      dockerfile: Dockerfile.core
+    command: ["python", "assistant_core.py", "poll"]
+    env_file: /etc/pokerhouse/assistant.env
+    volumes: ["assistant-data:/data"]
+    restart: unless-stopped
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  processor:
+    build:
+      context: .
+      dockerfile: Dockerfile.core
+    command: ["python", "assistant_core.py", "process"]
+    volumes: ["assistant-data:/data"]
+    restart: unless-stopped
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+volumes:
+  assistant-data:
