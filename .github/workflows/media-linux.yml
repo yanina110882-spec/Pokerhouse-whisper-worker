@@ -1,0 +1,23 @@
+name: Synthetic Linux media regression
+on:
+  push:
+    branches: [ci/synthetic-media-linux-20261010]
+    paths: ['ci/media/**', '.github/workflows/media-linux.yml']
+permissions:
+  contents: read
+jobs:
+  media:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Build synthetic-only container
+        run: docker build --pull -t synthetic-media-test ci/media
+      - name: Real Linux container tests
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=128m --cpus 1 --memory 768m --memory-swap 768m --pids-limit 64 synthetic-media-test
+      - name: Cleanup
+        if: always()
+        run: docker image rm -f synthetic-media-test || true
