@@ -26,13 +26,13 @@ def source_manifest(sources):
 
 
 def analyze_sources(provider, request):
-    """Analyze a document and its caption independently, then commit together.
+    """Analyze document/OCR and caption independently, then commit together.
 
     Original text is never rewritten. Each quote must ground in the source
     given to that provider call, before the unchanged Brain validation runs.
     """
     sources=request.get('sources', [])
-    if [s['channel'] for s in sources] != ['DOCUMENT_TEXT', 'CAPTION']:
+    if [s['channel'] for s in sources] not in (['DOCUMENT_TEXT', 'CAPTION'], ['ON_SCREEN_TEXT', 'CAPTION']):
         return provider.analyze(request)
     results=[];items=[]
     for source in sources:
