@@ -40,9 +40,36 @@ class OperationalTests(unittest.TestCase):
    finally:tempfile.tempdir=old
  def test_media_queue_document_to_brain(self):
   from media_queue import MediaQueue
+  from assistant_core import WaitingAI
+  from brain_inputs import render_sources
   from unittest.mock import patch
+  import hashlib
+  text='Завтра отправлю файл';payload=text.encode()
   e={'update_id':1,'message':{'message_id':1,'date':int(BASE.timestamp()),'chat':{'id':GROUP},'from':{'id':123},'document':{'file_id':'synthetic'}}}
   self.s.ingest(e,{GROUP});q=MediaQueue(self.s,API())
-  with patch('media_queue.download',return_value='Завтра отправлю файл'.encode()):q.process_one()
-  self.assertEqual(self.s.get(1)['state'],'EXTRACTED');self.b.process_one()
-  self.assertEqual(self.s.get(1)['state'],'ANALYSED');self.assertEqual(self.b.explain(self.b.items('commitments')[0]['id'])['source_type'],'telegram_document')
+  with patch('media_queue.download',return_value=payload):self.assertTrue(q.process_one())
+  self.assertEqual(self.s.get(1)['state'],'EXTRACTED')
+  envelope=json.loads(self.s.get(1)['extracted']);self.assertEqual(envelope['DOCUMENT_TEXT'],text)
+  self.assertEqual(envelope['hash'],hashlib.sha256(payload).hexdigest())
+  original=self.b.provider
+  class RetryOnce:
+   def analyze(inner,request):raise WaitingAI('synthetic_retry')
+  self.b.provider=RetryOnce();self.b.process_one(now=1000)
+  self.assertEqual(self.s.get(1)['state'],'WAITING_AI')
+  self.assertEqual(self.s.db.execute("SELECT count(*) FROM brain_audit WHERE action='brain_applied'").fetchone()[0],0)
+  self.b.provider=original;self.assertFalse(self.b.process_one(now=1001));self.b.process_one(now=2000)
+  self.assertEqual(self.s.get(1)['state'],'ANALYSED')
+  item=self.b.items('commitments')[0];self.assertEqual(item['quote'],text)
+  provenance=self.b.explain(item['id']);self.assertEqual(provenance['source_type'],'telegram_document');self.assertEqual(provenance['event_id'],1)
+  self.assertEqual(json.loads(self.s.get(1)['raw']),e)
+  analysis=json.loads(self.s.get(1)['analysis']);self.assertEqual(analysis['input_sources'][0],{'channel':'DOCUMENT_TEXT','source_ref':'event:1','sha256':hashlib.sha256(payload).hexdigest()})
+  self.assertTrue(all(i['quote'] in text and i['quote_channels']==['DOCUMENT_TEXT'] for i in analysis['items']))
+  self.assertFalse(any(i['kind']=='owner_rules' for i in analysis['items']))
+  self.assertTrue(all(i['origin']!='OWNER_CONFIRMED_FACT' for i in self.b.items('commitments')))
+  def state():return list(self.s.db.iterdump())
+  before=state();self.s.ingest(e,{GROUP});self.assertFalse(q.process_one(now=3000));self.assertFalse(self.b.process_one(now=3000));self.assertFalse(self.b.process_one(now=4000));self.assertEqual(state(),before)
+  self.assertEqual(self.s.db.execute("SELECT count(*) FROM brain_audit WHERE event_id=1 AND action='brain_applied'").fetchone()[0],1)
+  # Literal labels inside source are never stripped or converted to authority.
+  literal='[DOCUMENT_TEXT]\n'+text
+  self.assertEqual(render_sources([{'channel':'DOCUMENT_TEXT','text':literal,'source_ref':'synthetic'}]),literal)
+  self.quote_evidence={'state':'ANALYSED','brain_applied_effects':1,'retry_before_commit':True,'duplicate_state_identical':True,'source_channel':'DOCUMENT_TEXT','quote_exact_extracted_text':True,'raw_event_preserved':True,'media_sha256_preserved':True,'owner_rights':False}

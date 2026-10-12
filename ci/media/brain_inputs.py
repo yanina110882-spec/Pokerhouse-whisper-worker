@@ -14,6 +14,10 @@ def media_sources(envelope, message, source_ref):
             for channel,text in candidates if isinstance(text,str) and text.strip()]
 
 def render_sources(sources):
+    # A single extracted document needs no display header in provider text.
+    # Its channel/ref/hash remain in structured sources; do not strip user text.
+    if len(sources)==1 and sources[0]['channel']=='DOCUMENT_TEXT':
+        return sources[0]['text']
     return '\n\n'.join('['+s['channel']+']\n'+s['text'] for s in sources)
 
 def source_manifest(sources):
