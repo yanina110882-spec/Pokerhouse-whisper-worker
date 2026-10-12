@@ -9,7 +9,7 @@ import time
 from datetime import datetime, timedelta, time as dtime
 from zoneinfo import ZoneInfo
 from assistant_core import WaitingAI
-from brain_inputs import media_sources, render_sources, source_manifest
+from brain_inputs import media_sources, render_sources, source_manifest, analyze_sources
 
 KINDS = {'people','entities','facts','decisions','tasks','commitments','deadlines',
          'issues','risks','open_loops','financial_events','marketing_experiments',
@@ -282,7 +282,7 @@ class Brain:
         history=[dict(r) for r in self.db.execute('SELECT kind,item_key,value,knowledge_status,source FROM brain_items WHERE scope=? ORDER BY id DESC LIMIT 30',(scope,))]
         request={'text':text,'at':at,'is_owner':is_owner,'active_topics':topics,'history':history,'sources':input_sources}
         try:
-            result=self.provider.analyze(request)
+            result=analyze_sources(self.provider,request)
             items=result['items']
             if not isinstance(items,list) or len(items)>50:raise ValueError('invalid_extraction')
             for item in items:

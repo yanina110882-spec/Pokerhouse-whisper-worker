@@ -23,3 +23,28 @@ def render_sources(sources):
 def source_manifest(sources):
     return [{'channel':s['channel'],'source_ref':s['source_ref'],
              'sha256':hashlib.sha256(s['text'].encode()).hexdigest()} for s in sources]
+
+
+def analyze_sources(provider, request):
+    """Analyze a document and its caption independently, then commit together.
+
+    Original text is never rewritten. Each quote must ground in the source
+    given to that provider call, before the unchanged Brain validation runs.
+    """
+    sources=request.get('sources', [])
+    if [s['channel'] for s in sources] != ['DOCUMENT_TEXT', 'CAPTION']:
+        return provider.analyze(request)
+    results=[];items=[]
+    for source in sources:
+        result=provider.analyze({**request, 'text':source['text'],
+                                'sources':[source], 'is_owner':False})
+        extracted=result['items']
+        if not isinstance(extracted,list):raise ValueError('invalid_extraction')
+        manifest=source_manifest([source])[0]
+        for item in extracted:
+            quote=item.get('quote')
+            if not isinstance(quote,str) or not quote or quote not in source['text']:
+                raise ValueError('ungrounded_source_extraction')
+            items.append({**item, 'quote_source':manifest})
+        results.append({'source':manifest, 'method':result.get('method','provider')})
+    return {'items':items, 'method':'source_separated', 'source_results':results}
